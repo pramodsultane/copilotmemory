@@ -136,3 +136,4 @@ data/
 *.db-journal
 .vectors/
 .cache/
+LICENSE
