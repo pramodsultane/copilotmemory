@@ -17,6 +17,40 @@ app = typer.Typer(
 )
 
 
+def _build_prompt_text(query: str, results: list, context: str) -> str:
+    """Build a ready-to-paste Copilot prompt from search results."""
+    lines = []
+    lines.append("Use this memory context while answering my request.")
+    lines.append("")
+    lines.append("My request:")
+    lines.append(query)
+    lines.append("")
+
+    if results:
+        lines.append("Relevant memory highlights:")
+        for idx, result in enumerate(results, 1):
+            first_line = result.code.strip().splitlines()
+            preview = first_line[0][:120] if first_line else "[no code preview]"
+            description = result.description or "No description"
+            tags = ", ".join(result.tags) if result.tags else "none"
+            lines.append(
+                f"- #{idx}: {description} | lang={result.language} | tags={tags} | relevance={result.relevance:.2f}"
+            )
+            lines.append(f"  Snippet preview: {preview}")
+        lines.append("")
+        lines.append("Detailed memory context:")
+        lines.append(context)
+    else:
+        lines.append("No relevant memory was found. Provide the best answer based on current request only.")
+
+    lines.append("")
+    lines.append("Constraints:")
+    lines.append("- Reuse the patterns above when relevant.")
+    lines.append("- Call out assumptions before coding.")
+    lines.append("- Return concise, production-ready output.")
+    return "\n".join(lines)
+
+
 @app.command()
 def store(
     file: Optional[Path] = typer.Option(
@@ -117,6 +151,48 @@ def search(
             if result.description:
                 typer.echo(f"    Description: {result.description}")
             typer.echo()
+
+    except Exception as e:
+        typer.echo(f"Error: {str(e)}", err=True, fg=typer.colors.RED)
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def prompt(
+    query: str = typer.Argument(..., help="Question/task to send to Copilot"),
+    limit: int = typer.Option(5, "--limit", "-l", help="Max memory results"),
+    threshold: float = typer.Option(
+        0.6,
+        "--threshold",
+        "-t",
+        help="Relevance threshold (0-1)",
+    ),
+    max_context_tokens: int = typer.Option(
+        1200,
+        "--max-context-tokens",
+        help="Approximate max tokens for assembled context",
+    ),
+) -> None:
+    """Generate a ready-to-paste Copilot prompt using memory search results."""
+    retriever = ContextRetriever()
+
+    try:
+        results, exec_time = retriever.search(
+            query=query,
+            limit=limit,
+            threshold=threshold,
+        )
+        context = retriever.assemble_context(
+            search_results=results,
+            max_tokens=max_context_tokens,
+        )
+
+        typer.echo(
+            f"Retrieved {len(results)} memory matches in {exec_time:.2f}ms",
+            fg=typer.colors.BLUE,
+        )
+        typer.echo("\n=== Ready-to-paste Copilot prompt ===\n")
+        typer.echo(_build_prompt_text(query=query, results=results, context=context))
 
     except Exception as e:
         typer.echo(f"Error: {str(e)}", err=True, fg=typer.colors.RED)

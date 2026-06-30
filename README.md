@@ -85,6 +85,12 @@ copilotmemory store --file session.py --language python --tags "refactoring,opti
 copilotmemory search "how did I implement caching?" --limit 5
 ```
 
+#### Generate a ready-to-paste Copilot prompt
+
+```bash
+copilotmemory prompt "implement retry with exponential backoff for this API client" --limit 5 --threshold 0.6
+```
+
 #### List all stored sessions
 
 ```bash
