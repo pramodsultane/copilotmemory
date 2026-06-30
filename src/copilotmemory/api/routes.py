@@ -73,9 +73,17 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    # Initialize services
+    # Initialize core storage service eagerly.
+    # Retriever is initialized lazily because model download can fail in
+    # restricted network/certificate environments.
     store = SessionMemoryStore()
-    retriever = ContextRetriever()
+    retriever: Optional[ContextRetriever] = None
+
+    def get_retriever() -> ContextRetriever:
+        nonlocal retriever
+        if retriever is None:
+            retriever = ContextRetriever()
+        return retriever
 
     # Health check
     @app.get("/api/v1/health")
@@ -151,7 +159,8 @@ def create_app() -> FastAPI:
             Search results and metadata
         """
         try:
-            results, execution_time = retriever.search(
+            active_retriever = get_retriever()
+            results, execution_time = active_retriever.search(
                 query=query,
                 limit=limit,
                 threshold=threshold,
@@ -176,7 +185,15 @@ def create_app() -> FastAPI:
 
         except Exception as e:
             logger.error(f"Search failed: {str(e)}")
-            raise HTTPException(status_code=500, detail="Search failed")
+            # Return actionable guidance for model/bootstrap failures
+            # while still allowing non-search endpoints to work.
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Search unavailable. Embedding model could not be initialized. "
+                    "Check network/certificates or pre-download the model."
+                ),
+            )
 
     # Retrieve specific memory
     @app.get("/api/v1/memories/{memory_id}", response_model=MemoryResponse)
