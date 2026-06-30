@@ -1,0 +1,75 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+name = "copilotmemory"
+version = "0.1.0"
+description = "AI-powered memory layer for GitHub Copilot that stores, retrieves, and contextualizes past coding interactions"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Pramod Sultane", email = "pramod@example.com"}
+]
+requires-python = ">=3.10"
+keywords = ["copilot", "memory", "ai", "coding", "vector-search", "embeddings"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+]
+
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "typer[all]>=0.9.0",
+    "chromadb>=0.4.0",
+    "sentence-transformers>=2.2.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "sqlite3-python>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+    "pytest-env>=0.0.0",
+]
+
+[project.scripts]
+copilotmemory = "copilotmemory.cli.commands:app"
+
+[tool.poetry]
+packages = [{include = "copilotmemory", from = "src"}]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = '\.pyi?$'
+
+[tool.ruff]
+select = ["E", "F", "W", "I", "N"]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=src/copilotmemory --cov-report=term-missing"
+asyncio_mode = "auto"
